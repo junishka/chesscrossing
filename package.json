@@ -1,0 +1,32 @@
+{
+  "name": "chesscrossing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chess Crossing. A chess game that is a little more than chess.",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false server/index.ts",
+    "build": "vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "preview": "npm run build && npm run start",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "vitest run",
+    "postinstall": "node scripts/copy-engine.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "chess.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "happy-dom": "^20.14.5",
+    "stockfish": "^19.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
