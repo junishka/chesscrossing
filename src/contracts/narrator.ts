@@ -31,7 +31,7 @@ export interface NarratorContext {
   fen: string
   /** Full game so far, PGN movetext without headers. Empty string if no game. */
   pgn: string
-  /** The last few half-moves in SAN, oldest first. At most 6. */
+  /** The last half-moves in SAN, oldest first. At most 10. */
   lastMovesSan: string[]
   turn: Color
   playerColor: Color
@@ -44,7 +44,10 @@ export interface NarratorContext {
   evalMate?: number
   lastMoveClassification?: MoveClassification
   roomId: string
+  /** e.g. 'Room 1, the Declarations Room'. */
   roomName: string
+  /** The hour named on card 1-17, e.g. '18.00' or 'After'. */
+  hour: string
   /** The object or piece being inspected, by display name, if any. */
   inspecting?: string
   /** A door the player just tried, by display name, if any. */
@@ -82,8 +85,10 @@ export const NARRATOR_HEALTH_PATH = '/api/narrator/health'
 export const NARRATOR_RESET_PATH = '/api/narrator/reset'
 
 /**
- * The narrator may answer an event with silence. The model signals it by
- * replying with exactly this token and nothing else. The server converts it to
- * { type: 'done', text: '', silent: true }.
+ * The narrator may answer with silence. The system prompt tells the model that
+ * its entire output is then one em dash. The server treats an output that is
+ * empty, or only dashes (em, en, or hyphen) and whitespace, as silence and
+ * sends { type: 'done', text: '', silent: true }. The panel then types the
+ * world's silence mark (also an em dash) on its own line.
  */
-export const SILENCE_TOKEN = '[silence]'
+export const SILENCE_TOKEN = '\u2014'

@@ -18,12 +18,34 @@ export interface StageRect {
 export type ObjectKind = 'object' | 'furniture' | 'door' | 'text'
 export type Layer = 'wall' | 'floor' | 'front'
 
+/** One typed entry of Form F.P. 22: six columns, then the dash and the annotation. */
+export interface CaptionEntry {
+  /** Item number, e.g. '1-03' or 'S-4'. */
+  item: string
+  description: string
+  material: string
+  condition: string
+  /** R Republic, H Household, D Disputed. Empty when the bible gives none. */
+  ownership: '' | 'R' | 'H' | 'D'
+  disposition: string
+  /** The third hand, after the dash. Without the dash. */
+  annotation: string
+  /**
+   * Doors only: the last sentence of a locked door's caption ("Room 3 is
+   * typed. It is not yet annotated."), set at 60 per cent and dropped when the
+   * room is annotated. Kept separate so the data can drop it.
+   */
+  lockedSentence?: string
+}
+
 export interface WorldObject {
   id: string
-  /** Display name, as it appears in a caption's first line. */
+  /** Display name for aria labels, e.g. 'Greatcoat, west hook'. */
   name: string
-  /** The caption text, written out in full, as the bible has it. */
+  /** The whole caption as one line, as the bible has it: columns, dash, annotation. */
   caption: string
+  /** The caption in its six columns. */
+  entry: CaptionEntry
   /** Extra lines shown when inspected. */
   dossier?: readonly string[]
   rect: StageRect
@@ -73,17 +95,33 @@ export interface World {
   rooms: Room[]
   pieces: Record<PieceKey, PieceDossier>
   household: Household[]
+  /** The game's year for the ledger, e.g. 1990. */
+  year: number
+  /** Formats a date for the ledger and the stamp: day, month in roman numerals, two-digit year, e.g. '14 III 90'. */
+  ledgerDate(date: Date): string
   opponent: {
     name: string
-    /** One label per strength, from the bible. */
-    strengthLabels: Record<Strength, string>
-    defaultStrength: Strength
+    /** The hours card, item 1-17, in order. Naming an hour starts a game or sets the strength. */
+    hours: readonly { label: string; strength: Strength }[]
+    /** Index into hours. */
+    defaultHour: number
+    /** His fixed words, as the ledger enters them. */
+    lines: { please: string; thankYou: string; thankYouHelder: string; positionKeeps: string }
   }
   narrator: {
     name: string
+    /** The mark typed when he is silent. An em dash. */
     silenceMark: string
+    /** The input placeholder: 'Ask.' */
     placeholder: string
+    /** The prefix before the player's words: 'Visitor (1).' */
+    visitorLabel: string
   }
+  /**
+   * Page-head controls. Not in the bible; a design decision recorded in
+   * docs/architecture.md. Written in the house's register.
+   */
+  controls: { resign: string; takeBlack: string; takeWhite: string; soundOn: string; soundOff: string }
 }
 
 export interface RoomScene {
@@ -95,7 +133,12 @@ export interface RoomScene {
 
 /**
  * Functions the world module must export from src/world/index.ts.
- * The scene emits 'object:inspect', 'door:tried', and 'room:enter' on the bus.
+ * The scene owns the page (x 70 to 100): head, caption block, and the slots
+ * for the ledger and the narrator. It emits 'object:inspect', 'door:tried',
+ * 'room:enter', 'player:hour', 'player:color', 'player:resign', and
+ * 'settings:sound'. It listens to 'piece:inspect' to raise dossier cards over
+ * the caption block, to 'game:move' and clicks to dismiss them, and to
+ * 'player:hour' to underline the chosen hour.
  */
 export interface WorldModule {
   loadWorld(): World

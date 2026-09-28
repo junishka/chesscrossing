@@ -22,10 +22,18 @@ export interface BoardOptions {
   orientation?: Color
   /** Whether the player may move. Default true. */
   interactive?: boolean
-  /** Dossier names for the twelve piece types, used for hover dossiers and accessibility labels. */
+  /** Dossier names for the twelve piece types, used for accessibility labels. */
   pieceNames: Record<PieceKey, string>
-  /** Full dossier lines per piece type, shown on hover. */
-  pieceDossiers?: Record<PieceKey, readonly string[]>
+  /**
+   * The opponent's fixed words, entered in the ledger's Remarks by the clerk:
+   * `please` on the start row; `thankYou` on the result row; when he has lost,
+   * `thankYouHelder` first and then `thankYou`. From the world.
+   */
+  opponentLines: { please: string; thankYou: string; thankYouHelder: string }
+  /** Formats the date for the result row and the stamp, e.g. '14 III 90'. From the world. */
+  ledgerDate: (date: Date) => string
+  /** Whether the date-stamp sound starts on. The board also listens to 'settings:sound'. */
+  soundOn?: boolean
 }
 
 export interface BoardController {
@@ -44,6 +52,12 @@ export interface BoardController {
   setOrientation(color: Color): void
   /** The player resigns. Emits 'game:over'. */
   resign(): void
+  /**
+   * The tray insert cuts in for two seconds when a piece enters it. This keeps
+   * it visible while the tray object in the scene is hovered (the app shell
+   * bridges 'object:inspect' for the tray's item to this call).
+   */
+  setTrayVisible(on: boolean): void
   destroy(): void
 }
 
@@ -51,6 +65,8 @@ export interface BoardController {
  * Function the board module must export from src/board/index.ts.
  * The player's own moves are handled inside the board (click, drag, keyboard)
  * and reported through the bus as 'game:move' with by: 'player'.
+ * The board insert is hidden until newGame and cuts out after the pieces have
+ * returned at game end (docs/visual.md sections 6, 7, 9, 11).
  */
 export interface BoardModule {
   createBoard(mounts: BoardMounts, options: BoardOptions, bus: EventBus): BoardController

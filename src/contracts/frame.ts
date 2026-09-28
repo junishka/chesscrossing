@@ -3,16 +3,26 @@
  * Implemented in src/frame. Everything visual that is shared lives there.
  */
 
-/** One room's palette. Roles, not colors. Hex strings. */
+/**
+ * One room's palette: six colours, each carried by an object, and no others.
+ * The frame exposes them as --c-wall, --c-wood, --c-light, --c-dark, --c-wax,
+ * --c-ink on the stage. Two global constants live in the frame: --ink (Iron
+ * Gall, the matte and every outline) and --paper (Form White, title-card type).
+ * See docs/visual.md section 2.
+ */
 export interface Palette {
+  /** Wall and the large soft objects (Room 1: Service Green). */
   wall: string
-  floor: string
+  /** Wood: desk, floor, doors, chairs, board frame (Room 1: Marle Oak). */
   wood: string
-  boardLight: string
-  boardDark: string
-  accent: string
+  /** Light squares, white pieces, index cards, page ground, brass (Room 1: Boxwood). */
+  light: string
+  /** Dark squares, black pieces, iron (Room 1: Macassar Ebony). */
+  dark: string
+  /** The one warm accent: NIL, stencil, stamp, chapter-card ground (Room 1: Seal Wax). */
+  wax: string
+  /** All type, hands, outlines and shadow lines (Room 1: Iron Gall). */
   ink: string
-  paper: string
 }
 
 export type CardKind = 'title' | 'chapter' | 'intertitle'

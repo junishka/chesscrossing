@@ -79,3 +79,16 @@ npm run build && npm start
 ```
 
 Copy `.env.example` to `.env` to choose a narrator backend. Without credentials, use `NARRATOR_BACKEND=mock`.
+
+## Decisions the bible leaves to the build
+
+Recorded here so nobody re-decides them.
+
+1. **Starting a game.** The visitor names an hour on card 1-17 ("The visitor names the hour"). Naming an hour when no game is on starts one: Mr Halm's "Please." is entered on the ledger's start row and the board insert cuts in. Naming a different hour during a game changes his strength from the next move. The world emits `player:hour`; the app shell decides.
+2. **Controls.** The bible gives no way to resign, take black, or silence the stamp. These live in the page head as typed words in the house's register, with no boxes: `Resign.`, `Take black.` / `Take white.`, and the stamp toggle. The world holds the copy (`world.controls`) and emits `player:resign`, `player:color`, `settings:sound`. The sound setting is remembered per browser by the world.
+3. **Dossiers.** The board reports a click on a piece (`piece:inspect`); the world raises the card over the caption block, because the page is the world's. A piece clicked in the tray raises a face-down card.
+4. **Tray hover.** Hovering the tray in the scene (item 1-06) shows the tray insert. The app shell bridges `object:inspect` for that item to `board.setTrayVisible`.
+5. **Mr Halm's words.** Fixed strings from the world, entered by the board's ledger on the start row and the result row. The Helder word for "Thank you" is not in the bible; the world supplies one and records it in its data file.
+6. **Engine loading.** Stockfish loads during the title sequence. If an hour is named before it is ready, the game starts when it is. No loading indicator: captions live on the page, and the page has nothing to say about engines.
+7. **Palette tokens.** `--c-wall`, `--c-wood`, `--c-light`, `--c-dark`, `--c-wax`, `--c-ink` per room; `--ink` and `--paper` global. Six colours to a room, as the tenth law requires.
+8. **Units.** The stage is 1600 by 900 reference pixels scaled uniformly; `1rem` is stage height divided by fifty; `--rpx` is one reference pixel in CSS pixels. Everything visible is sized in rem or rpx.

@@ -11,8 +11,10 @@ export interface NarratorPanelOptions {
   silenceMark: string
   /** Supplies the current context on every request. Wired by the app shell. */
   getContext: () => NarratorContext
-  /** Placeholder text for the input field, from the world. */
-  placeholder?: string
+  /** Placeholder text for the input field, from the world: 'Ask.' */
+  placeholder: string
+  /** The label before the player's words and at the left of the input line: 'Visitor (1).' */
+  visitorLabel: string
 }
 
 export interface NarratorPanel {

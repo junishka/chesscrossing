@@ -3,7 +3,7 @@
  * bus and through the interfaces in this directory. No module imports another
  * module's internals.
  */
-import type { Color, GameResult, GameSnapshot, MoveRecord, PieceKey } from './chess'
+import type { Color, GameResult, GameSnapshot, MoveRecord, PieceKey, Strength } from './chess'
 
 export type MoveClassification = 'blunder' | 'mistake' | 'inaccuracy' | 'good' | 'excellent'
 
@@ -22,7 +22,12 @@ export type AppEvent =
   // Engine
   | { type: 'engine:status'; status: 'loading' | 'ready' | 'thinking' | 'error'; detail?: string }
   // Inspection
-  | { type: 'piece:inspect'; key: PieceKey | null }
+  /**
+   * A piece was clicked (or its card dismissed, key null). `captured` when it
+   * was clicked in the tray; its card is then face down. The world raises the
+   * dossier card on the page; the board only reports.
+   */
+  | { type: 'piece:inspect'; key: PieceKey | null; captured?: boolean; square?: string }
   | { type: 'object:inspect'; objectId: string | null }
   | { type: 'door:tried'; doorId: string; locked: boolean; leadsTo?: string }
   | { type: 'room:enter'; roomId: string }
@@ -33,7 +38,19 @@ export type AppEvent =
   // Player intent
   | { type: 'player:leave-room' }
   | { type: 'player:resign' }
+  /** Emitted by the app shell when a game is to begin (after an hour is named). */
   | { type: 'player:new-game'; color?: Color }
+  /**
+   * The visitor named an hour on card 1-17. The world emits this; the app shell
+   * starts a game if none is on, or changes the opponent's strength if one is.
+   * The world underlines the chosen hour itself by listening to this event.
+   */
+  | { type: 'player:hour'; index: number; strength: Strength }
+  /** The visitor chose which side to take for the next game. */
+  | { type: 'player:color'; color: Color }
+  // Settings
+  /** The date-stamp sound. The world's page-head control emits it, also once on mount with the stored value. */
+  | { type: 'settings:sound'; on: boolean }
 
 export type AppEventType = AppEvent['type']
 export type AppEventOf<T extends AppEventType> = Extract<AppEvent, { type: T }>
