@@ -401,16 +401,17 @@ export function buildContactDisc(radius: number): THREE.Mesh {
         const r = Math.sqrt(dx * dx + dy * dy) * 2
         const soft = 1 - THREE.MathUtils.smoothstep(r, 0.55, 1)
         const grain = 0.96 + rnd() * 0.04
-        const v = Math.round(255 * (1 - 0.55 * soft * grain))
+        // Ink-coloured disc whose alpha carries the softness: normal blending, so no premultiplied-alpha
+        // requirement and it darkens whatever it lies on (sand, turf, felt) like a painted contact shadow.
         const i = (y * size + x) * 4
-        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255
+        d[i] = 0x23; d[i + 1] = 0x21; d[i + 2] = 0x1e; d[i + 3] = Math.round(255 * 0.55 * soft * grain)
       }
     }
     ctx.putImageData(img, 0, 0)
   }
   const map = new THREE.CanvasTexture(canvas)
   map.colorSpace = THREE.SRGBColorSpace
-  const material = new THREE.MeshBasicMaterial({ map, blending: THREE.MultiplyBlending, depthWrite: false, transparent: true, toneMapped: false })
+  const material = new THREE.MeshBasicMaterial({ map, depthWrite: false, transparent: true, toneMapped: false })
   const mesh = new THREE.Mesh(new THREE.CircleGeometry(radius, 32), material)
   mesh.name = 'contact'
   mesh.rotation.x = -Math.PI / 2
