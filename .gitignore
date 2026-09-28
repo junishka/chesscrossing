@@ -6,3 +6,6 @@ shots/
 .DS_Store
 .env
 .env.local
+dev/probe/
+dev/stubs/
+dev/*.mjs
