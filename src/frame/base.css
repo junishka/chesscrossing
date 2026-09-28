@@ -1,0 +1,283 @@
+/*
+  Chess Crossing. Base styles. docs/visual.md sections 1, 8, 11, 14.
+  Reset, the matte, the letterboxed stage, focus, cursor, reduced motion.
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  cursor: default; /* the default arrow everywhere; no pointer hand */
+}
+
+html {
+  /* 18 px on a 900-px stage. The frame keeps this current (stage height / 50). */
+  font-size: 18px;
+  background: var(--ink);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--ink); /* the matte */
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+  line-height: 1.5;
+  font-synthesis: none; /* no synthetic bold or italic */
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+p,
+h1,
+h2,
+h3 {
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* Focus: the outline goes from 1 to 2 rpx Iron Gall. No transition, nothing else. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: calc(2 * var(--rpx)) solid var(--c-ink, var(--ink));
+  outline-offset: calc(-1 * var(--rpx));
+  transition: none;
+  box-shadow: none;
+}
+
+::selection {
+  background: var(--c-ink, var(--ink));
+  color: var(--c-light, var(--paper));
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- The letterboxed stage (section 1.2) ---------- */
+
+.frame-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--c-ink);
+  /* width and height are set in CSS pixels by createStage */
+}
+
+.stage-plane {
+  position: absolute;
+  inset: 0;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.stage-content {
+  position: absolute;
+  inset: 0;
+}
+
+/* A card lies on the plane at the stage's origin, over the content. */
+.stage-card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--c-wax);
+  color: var(--paper);
+  z-index: 1;
+}
+.stage-card[data-card-fade='in'] {
+  opacity: 0;
+}
+.stage-card[data-card-fade='up'] {
+  opacity: 1;
+  transition: opacity var(--t-fade) var(--e-fade);
+}
+.stage-card-inner {
+  display: grid;
+  justify-items: center;
+  row-gap: 0;
+  padding: 0 4rem;
+}
+.stage-card-inner[data-card-layout='block'] {
+  justify-items: start;
+  max-width: 34em;
+  text-align: left;
+}
+.stage-card-inner[data-card-layout='block'] .t-card-body {
+  text-align: left;
+}
+.stage-card-gap {
+  height: 0.8rem;
+}
+
+/* ---------- Paper (section 1.7) ---------- */
+
+.paper {
+  position: relative;
+  background: var(--c-light);
+}
+.paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--tint-grain);
+  filter: url('#frame-grain');
+}
+.paper > * {
+  position: relative;
+}
+.frame-grain-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------- Caption (section 8) ---------- */
+
+.caption {
+  display: block;
+  color: var(--c-ink);
+  white-space: pre-wrap;
+}
+
+/* ---------- Dossier card (section 8) ---------- */
+
+.dossier {
+  position: relative;
+  width: calc(400 * var(--rpx));
+  height: calc(240 * var(--rpx));
+  border: var(--hairline);
+  color: var(--c-ink);
+  overflow: hidden;
+  animation: dossier-appear var(--t-card-appear) var(--e-card) both;
+}
+.dossier-roster {
+  position: absolute;
+  left: calc(10 * var(--rpx));
+  right: calc(10 * var(--rpx));
+  top: 0;
+  height: calc(22 * var(--rpx));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  line-height: 1;
+}
+.dossier-head-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(22 * var(--rpx));
+  height: var(--rpx);
+  background: var(--c-wax);
+}
+.dossier-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.dossier-text {
+  position: absolute;
+  left: calc(10 * var(--rpx));
+  right: calc(10 * var(--rpx));
+  top: calc(22 * var(--rpx) + var(--rpx));
+  bottom: 0;
+  overflow: hidden;
+}
+.dossier-text > * {
+  line-height: 1.25rem;
+  white-space: pre-wrap;
+}
+
+@keyframes dossier-appear {
+  from {
+    opacity: 0;
+    transform: translateY(calc(6 * var(--rpx)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Reduced motion: every motion duration is 0 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fade: 0ms;
+    --t-whip: 0ms;
+    --t-piece: 0ms;
+    --t-capture: 0ms;
+    --t-capture-stagger: 0ms;
+    --t-return: 0ms;
+    --t-card-appear: 0ms;
+    --t-track: 0ms;
+    --t-caret-blink: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

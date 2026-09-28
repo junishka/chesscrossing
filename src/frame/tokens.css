@@ -1,0 +1,232 @@
+/*
+  Chess Crossing. Frame tokens. docs/visual.md sections 2, 3, 11.
+
+  Every colour in the game is one of these custom properties. No module
+  outside src/frame writes a hex value.
+
+  CLASSES OTHER MODULES MUST USE (nothing is restyled elsewhere):
+
+  Typography (section 3)
+    .t-card-1          Card line 1 (REPUBLIC OF VARDENNE)      500 2.0rem  0.24em upper centred
+    .t-card-ministry   Card ministry line                      500 1.1rem  0.20em upper centred
+    .t-card-form       Card form line                          500 1.4rem  0.18em upper centred
+    .t-card-body       Card body                               400 0.9rem  0.02em sentence, max 34em
+    .t-card-label      A label inside the card body            500
+    .t-chapter-numeral Chapter numeral (I.)                    500 3.2rem  0.10em upper centred
+    .t-chapter-room    Chapter room line (ROOM 1)              500 1.1rem  0.30em upper centred
+    .t-chapter-title   Chapter title                           500 1.6rem  0.20em upper centred
+    .t-chapter-line    Chapter one-line                        400 0.9rem  0.02em sentence, max 30em
+    .t-page-head       Page head                               500 0.7rem  0.12em upper left
+    .t-column-head     Column heads                            500 0.6rem  0.10em upper left
+    .t-caption         Caption columns                         400 0.7rem  0      as typed, left, ragged
+    .t-annotation      Annotation                              400 0.8rem  0      as typed, left, tnum
+    .t-ledger          Ledger rows                             400 0.8rem  0      as typed, left, tnum
+    .t-narrator        Narrator                                400 0.85rem 0      as typed, left, ragged
+    .t-player          Player's words                          400 italic 0.85rem
+    .t-visitor         The prefix before the player's words    500 0.85rem
+    .t-remarks-sub     "Of any length, provided it is true."   400 0.6rem  sentence
+    .t-dossier-title   Dossier title                           500 0.85rem
+    .t-dossier-body    Dossier body                            400 0.75rem
+    .t-roster          Dossier roster line                     500 0.55rem 0.14em upper
+    .t-coords          Board coordinates                       500 0.55rem 0.05em centred
+    .t-nil             NIL on the Tariff Board                 500 1.0rem  0.12em upper
+    .t-stencil         Tray stencil                            500 0.75rem 0.12em upper
+    .t-stamp           DETAINED stamp                          500 0.6rem  0.12em upper
+    .t-stamp-date      The stamp's date band                   500 0.5rem  0.12em
+    .t-label           Cabinet labels, hours card, tally card  400 0.5rem  0.02em as typed, left
+
+  Ink tints (section 2). Iron Gall over Boxwood at a stated opacity.
+    .e-faint           the lower-case e in ledger and narrator   72 per cent
+    .locked-sentence   the last sentence of a locked door        60 per cent
+    .placeholder-tint  the input placeholder ("Ask.")           45 per cent
+    .pencil            pencil additions, italic                 70 per cent
+    .card-rule         ruled lines on index cards               12 per cent
+    .wear              Boxwood over Marle Oak (path S-4)        18 per cent
+
+  Lines (section 1.7, section 8)
+    .hairline          1 rpx Iron Gall frame, square corners, no shadow
+    .shadow-line       the one flat shadow: a 1 rpx Iron Gall line along the lower edge
+    .rule              a horizontal 1 rpx Iron Gall rule (createRule)
+
+  Surfaces
+    .paper             Boxwood ground with the grain of section 1.7 (paper.ts)
+    .caret             the typewriter caret, 1 rpx (typewrite.ts)
+    .outlined          a captioned object: 1 rpx outline, 2 rpx on hover and focus, no transition
+
+  Fonts: Jost 400, 500 and 400 italic only, self-hosted in /fonts (index.html).
+  Libre Caslon Text (letters and books) and Courier Prime (archived
+  typescript) are reserved for later rooms and are NOT downloaded in phase
+  one. Nothing in Room 1 uses a serif or a monospaced face.
+*/
+
+:root {
+  /* Global ink and paper. Every room, every outline, the matte. */
+  --ink: #202834;
+  --paper: #f5f2eb;
+
+  /* One reference pixel in CSS pixels. The stage sets this from its size;
+     until it does, 1 rpx is 1/18 rem, which is the same ratio (900 / 50). */
+  --rpx: calc(1rem / 18);
+  --hairline: var(--rpx) solid var(--c-ink, var(--ink));
+  --shadow-line: 0 var(--rpx) 0 0 var(--c-ink, var(--ink));
+
+  /* Type. */
+  --font: 'Jost', 'Futura', 'Century Gothic', sans-serif;
+
+  /* Ink tints, as opacities. */
+  --tint-e-faint: 0.72;
+  --tint-locked: 0.6;
+  --tint-placeholder: 0.45;
+  --tint-pencil: 0.7;
+  --tint-card-rule: 0.12;
+  --tint-wear: 0.18;
+  --tint-grain: 0.04;
+
+  /* Motion (section 11). Durations that are motion carry --t-; holds carry
+     --hold- and do not collapse under reduced motion. */
+  --t-fade: 600ms;
+  --e-fade: ease-out;
+  --hold-card: 4000ms;
+  --t-cut: 0ms;
+  --t-whip: 380ms;
+  --e-pan: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-piece: 240ms;
+  --e-piece: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-capture: 320ms;
+  --t-capture-stagger: 80ms;
+  --t-return: 600ms;
+  --t-card-appear: 160ms;
+  --e-card: ease-out;
+  --hold-tray: 2000ms;
+  --hold-stamp: 300ms;
+  --t-ledger-char: 55ms;
+  --t-narrator-char: 36ms;
+  --t-pause-stop: 180ms;
+  --t-pause-comma: 90ms;
+  --t-column-gap: 120ms;
+  --t-caret-blink: 1000ms;
+  --t-track: 700ms;
+  --hold-empty-room: 3000ms;
+  --hold-uncaptioned: 2000ms;
+}
+
+/* The six room tokens live on the stage and are set by setPalette. Until a
+   palette is applied they hold ink and paper so nothing is invisible. */
+[data-stage] {
+  --c-wall: var(--ink);
+  --c-wood: var(--ink);
+  --c-light: var(--paper);
+  --c-dark: var(--ink);
+  --c-wax: var(--ink);
+  --c-ink: var(--ink);
+}
+
+/* ---------- Typography (section 3) ---------- */
+
+.t-card-1,
+.t-card-ministry,
+.t-card-form,
+.t-card-body,
+.t-chapter-numeral,
+.t-chapter-room,
+.t-chapter-title,
+.t-chapter-line {
+  font-family: var(--font);
+  line-height: 1.2;
+  text-align: center;
+  font-style: normal;
+}
+
+.t-card-1 { font-weight: 500; font-size: 2rem; letter-spacing: 0.24em; text-transform: uppercase; }
+.t-card-ministry { font-weight: 500; font-size: 1.1rem; letter-spacing: 0.2em; text-transform: uppercase; }
+.t-card-form { font-weight: 500; font-size: 1.4rem; letter-spacing: 0.18em; text-transform: uppercase; }
+.t-card-body { font-weight: 400; font-size: 0.9rem; letter-spacing: 0.02em; text-transform: none; max-width: 34em; }
+.t-card-label { font-weight: 500; }
+.t-chapter-numeral { font-weight: 500; font-size: 3.2rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.t-chapter-room { font-weight: 500; font-size: 1.1rem; letter-spacing: 0.3em; text-transform: uppercase; }
+.t-chapter-title { font-weight: 500; font-size: 1.6rem; letter-spacing: 0.2em; text-transform: uppercase; }
+.t-chapter-line { font-weight: 400; font-size: 0.9rem; letter-spacing: 0.02em; text-transform: none; max-width: 30em; }
+
+.t-page-head,
+.t-column-head,
+.t-caption,
+.t-annotation,
+.t-ledger,
+.t-narrator,
+.t-player,
+.t-visitor,
+.t-remarks-sub,
+.t-dossier-title,
+.t-dossier-body,
+.t-roster,
+.t-coords,
+.t-nil,
+.t-stencil,
+.t-stamp,
+.t-stamp-date,
+.t-label {
+  font-family: var(--font);
+  line-height: 1.5;
+  text-align: left;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.t-page-head { font-weight: 500; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.t-column-head { font-weight: 500; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.t-caption { font-weight: 400; font-size: 0.7rem; }
+.t-annotation,
+.t-ledger { font-weight: 400; font-size: 0.8rem; font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+.t-narrator { font-weight: 400; font-size: 0.85rem; }
+.t-player { font-weight: 400; font-size: 0.85rem; font-style: italic; }
+.t-visitor { font-weight: 500; font-size: 0.85rem; }
+.t-remarks-sub { font-weight: 400; font-size: 0.6rem; }
+.t-dossier-title { font-weight: 500; font-size: 0.85rem; }
+.t-dossier-body { font-weight: 400; font-size: 0.75rem; }
+.t-roster { font-weight: 500; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+.t-coords { font-weight: 500; font-size: 0.55rem; letter-spacing: 0.05em; text-align: center; font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+.t-nil { font-weight: 500; font-size: 1rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.t-stencil { font-weight: 500; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.t-stamp { font-weight: 500; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.t-stamp-date { font-weight: 500; font-size: 0.5rem; letter-spacing: 0.12em; font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+.t-label { font-weight: 400; font-size: 0.5rem; letter-spacing: 0.02em; font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+
+/* ---------- Ink tints (section 2) ---------- */
+
+.e-faint { opacity: var(--tint-e-faint); }
+.locked-sentence { opacity: var(--tint-locked); }
+.placeholder-tint { opacity: var(--tint-placeholder); }
+.pencil { font-style: italic; opacity: var(--tint-pencil); }
+.card-rule { display: block; height: var(--rpx); background: var(--c-ink); opacity: var(--tint-card-rule); }
+.wear { background: var(--c-light); opacity: var(--tint-wear); }
+
+/* ---------- Lines ---------- */
+
+.hairline { border: var(--hairline); border-radius: 0; box-shadow: none; }
+.shadow-line { box-shadow: var(--shadow-line); }
+.rule { display: block; width: 100%; height: var(--rpx); margin: 0; padding: 0; border: 0; background: var(--c-ink); }
+
+/* ---------- Outlined objects (section 8): 1 rpx, 2 rpx on hover and focus, no transition ---------- */
+
+.outlined {
+  outline: var(--rpx) solid var(--c-ink);
+  outline-offset: 0;
+  transition: none;
+}
+.outlined:hover,
+.outlined:focus-visible {
+  outline-width: calc(2 * var(--rpx));
+  outline-offset: calc(-1 * var(--rpx));
+}
+
+/* ---------- The typewriter caret ---------- */
+
+.caret {
+  display: inline-block;
+  width: var(--rpx);
+  height: 1em;
+  margin-left: 0.05em;
+  vertical-align: -0.15em;
+  background: currentColor;
+}

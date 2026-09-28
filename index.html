@@ -7,6 +7,12 @@
     <meta name="description" content="A chess game that is a little more than chess." />
     <!-- Fonts are self-hosted. Run scripts/fetch-fonts.mjs to add a family. The frame module owns this block. -->
     <link rel="stylesheet" href="/fonts/fonts.css" />
+    <!-- The matte (Iron Gall) is present before the frame module loads. The frame defines --ink; this is its value. -->
+    <style>
+      html {
+        background: #202834;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

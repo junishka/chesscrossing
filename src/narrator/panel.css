@@ -1,0 +1,130 @@
+/*
+  Chess Crossing. The narrator panel: the Remarks column and the input line.
+  docs/visual.md section 10. Every colour is a frame token; sizes in rem.
+  Nothing here animates except the block caret's blink (--t-caret-blink,
+  which base.css collapses to 0 under reduced motion).
+*/
+
+.narrator {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--c-ink);
+}
+
+.narrator-head {
+  flex: none;
+}
+.narrator-head .rule {
+  margin-top: 0.15rem;
+}
+
+/* The column. Newest at the bottom; wheel-scroll back allowed; no scrollbar drawn. */
+.narrator-column {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: auto;
+  scrollbar-width: none;
+  padding-top: 0.5rem;
+}
+.narrator-column::-webkit-scrollbar {
+  display: none;
+}
+
+/* One message. Messages are separated by one blank line. */
+.narrator-line {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.narrator-line + .narrator-line {
+  margin-top: 1.5em;
+}
+
+/* The input line at the foot: label left, field right, a rule under the whole line. */
+.narrator-input-line {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  column-gap: 0.5ch;
+  margin-top: 0.5rem;
+  min-height: calc(1.75rem - var(--rpx));
+}
+.narrator-input-label {
+  flex: none;
+}
+.narrator-field-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.narrator-input {
+  display: block;
+  width: 100%;
+  min-height: 1.5em;
+  max-height: 6em;
+  resize: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--c-ink);
+  caret-color: transparent; /* the block caret below stands in for it */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.narrator-input::-webkit-scrollbar {
+  display: none;
+}
+.narrator-input::placeholder {
+  color: transparent;
+}
+
+/* A mirror of the text up to the caret, invisible but for the caret itself. */
+.narrator-mirror {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: transparent;
+}
+.narrator-block-caret {
+  display: none;
+  width: 1ch;
+  height: 1em;
+  vertical-align: -0.15em;
+  background: var(--c-ink);
+  animation: narrator-caret-blink var(--t-caret-blink) steps(2, jump-none) infinite;
+}
+.narrator-field-wrap[data-focused] .narrator-block-caret {
+  display: inline-block;
+}
+
+/* "Ask." when the field is empty and unfocused. */
+.narrator-placeholder {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.narrator-field-wrap[data-focused] .narrator-placeholder,
+.narrator-field-wrap[data-filled] .narrator-placeholder {
+  display: none;
+}
+
+@keyframes narrator-caret-blink {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

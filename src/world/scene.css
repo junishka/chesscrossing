@@ -1,0 +1,242 @@
+/*
+  Chess Crossing. The world's scene and page. docs/visual.md sections 5, 8, 12.
+  Every colour is a frame token; every size is rem or rpx or a per cent of
+  the stage. Nothing here animates.
+*/
+
+.room {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--c-ink);
+}
+
+/* ---------- The scene, x 0 to 70 ---------- */
+
+.scene {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 70%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--c-wall);
+}
+
+.scene-wall {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 76%;
+  background: var(--c-wall);
+}
+
+.scene-floor {
+  position: absolute;
+  left: 0;
+  top: 76%;
+  width: 100%;
+  height: 24%;
+}
+.scene-floor > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.scene-object {
+  position: absolute;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+  color: var(--c-ink);
+  text-align: left;
+}
+.scene-object > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.scene-object[data-layer='wall'] {
+  z-index: 1;
+}
+.scene-object[data-layer='floor'] {
+  z-index: 2;
+}
+.scene-object[data-layer='front'] {
+  z-index: 3;
+}
+
+/* The worn path is clipped to its band; its outline is the polygon's stroke. */
+.scene-path {
+  outline: none;
+}
+.scene-path:hover [data-wear],
+.scene-path:focus-visible [data-wear] {
+  stroke-width: 2;
+}
+
+/* Type on the Tariff Board: six classes in Iron Gall, each struck NIL in Seal Wax. */
+.tariff-rows {
+  position: absolute;
+  inset: calc(6 * var(--rpx));
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  padding: 0 0.6rem;
+}
+.tariff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 0;
+}
+.tariff-class {
+  text-decoration: line-through;
+  text-decoration-color: var(--c-wax);
+  text-decoration-thickness: var(--rpx);
+  white-space: nowrap;
+}
+.tariff-nil {
+  color: var(--c-wax);
+}
+
+/* Cabinet labels: Boxwood, typed. */
+.cabinet-labels {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+}
+.cabinet-label-cell {
+  position: relative;
+}
+.cabinet-label {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  top: 24%;
+  height: calc(14 * var(--rpx));
+  display: flex;
+  align-items: center;
+  padding: 0 calc(2 * var(--rpx));
+  background: var(--c-light);
+  border: var(--hairline);
+  color: var(--c-ink);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* The hours card, item 1-17: paper, four typed lines, each a button. */
+.hours-card {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  border: var(--hairline);
+  box-shadow: var(--shadow-line);
+  color: var(--c-ink);
+}
+/* The card lies on the typewriter's keyboard, another front object drawn after it; the pointer must reach the card, and the board insert (z 4, later) still covers it while play is on. */
+.scene-object.hours-card {
+  z-index: 4;
+}
+.hours-card > .hour {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: 0;
+  padding: 0 calc(3 * var(--rpx));
+  text-align: left;
+  white-space: nowrap;
+  overflow: visible;
+}
+.hours-card > .hour[data-hour-chosen] {
+  text-decoration: underline;
+  text-decoration-thickness: var(--rpx);
+  text-underline-offset: var(--rpx);
+}
+
+/* Slots let the pointer through until a module puts something in them. */
+.slot {
+  position: absolute;
+  pointer-events: none;
+}
+.slot > * {
+  pointer-events: auto;
+}
+.scene > .slot {
+  z-index: 4;
+}
+
+/* ---------- The page, x 70 to 100 ---------- */
+
+.page {
+  position: absolute;
+  left: 70%;
+  top: 0;
+  width: 30%;
+  height: 100%;
+  border-left: var(--hairline);
+  overflow: hidden;
+  color: var(--c-ink);
+}
+
+.page-head {
+  overflow: hidden;
+}
+.page-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.page-controls {
+  display: flex;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+.page-controls > button {
+  padding: 0;
+  margin: 0;
+  color: inherit;
+}
+
+.caption-block {
+  overflow: hidden;
+}
+.caption-heads,
+.caption-columns {
+  display: grid;
+  grid-template-columns: 10% 38% 16% 14% 6% 16%;
+}
+.caption-heads > span,
+.caption-columns > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  padding-right: 0.25rem;
+}
+.caption-columns > span[data-col='description'] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.caption-annotation {
+  margin-top: 0.4rem;
+  white-space: pre-wrap;
+}
+
+/* The dossier lies over the caption block, centred. */
+.page-dossier {
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+.page-dossier > * {
+  pointer-events: auto;
+}

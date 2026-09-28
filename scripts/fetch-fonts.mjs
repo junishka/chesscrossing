@@ -39,12 +39,14 @@ for (const spec of specs) {
   const slug = family.toLowerCase().replace(/\s+/g, '-')
   const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(spec).replace(/%3A/g, ':').replace(/%2C/g, ',').replace(/%3B/g, ';').replace(/%40/g, '@')}&display=swap`
   const css = await get(url)
-  const blocks = css.split('@font-face').slice(1)
+  // Google puts the subset comment before each block: "/* latin */ @font-face { ... }".
+  // Match comment and block together so the label belongs to its own block.
+  const blocks = [...css.matchAll(/(?:\/\*\s*([a-z-]+)\s*\*\/\s*)?@font-face\s*\{[^}]*\}/g)]
   const kept = []
   let n = 0
-  for (const raw of blocks) {
-    const block = '@font-face' + raw
-    const subset = (block.match(/\/\*\s*([a-z-]+)\s*\*\//) ?? [])[1] ?? ''
+  for (const m of blocks) {
+    const block = m[0]
+    const subset = m[1] ?? ''
     if (subset && subset !== 'latin' && subset !== 'latin-ext') continue
     const src = block.match(/url\((https:[^)]+)\)/)?.[1]
     if (!src) continue
