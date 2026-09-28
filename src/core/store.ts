@@ -1,4 +1,4 @@
-import type { Ledger, Settings } from '../types'
+import type { Ledger, Season, Settings } from '../types'
 import { bus } from './bus'
 
 const KEY = 'chesscrossing.ledger.v1'
@@ -12,6 +12,14 @@ export const DEFAULT_SETTINGS: Settings = {
   playerName: '',
 }
 
+export function blankSeason(): Season {
+  return {
+    date: 1, watch: 0, watchElapsed: 0, tide: 0.5, seaState: 4, timeControl: 'none', rating: 1400,
+    expeditions: 0, warrants: ['king'], badges: ['PROVISIONAL'], platesRead: [], cairnTags: [], gridSquare: null,
+    carriedCard: false, crated: [], chapter: 1, ended: false, lampLit: false, spokenTo: [],
+  }
+}
+
 function blank(): Ledger {
   return {
     version: 1,
@@ -22,6 +30,7 @@ function blank(): Ledger {
     games: { played: 0, won: 0, lost: 0, drawn: 0 },
     settings: { ...DEFAULT_SETTINGS },
     conversations: {},
+    season: blankSeason(),
   }
 }
 
@@ -38,6 +47,7 @@ function load(): Ledger {
       games: { ...base.games, ...(parsed.games ?? {}) },
       settings: { ...base.settings, ...(parsed.settings ?? {}) },
       conversations: parsed.conversations ?? {},
+      season: { ...blankSeason(), ...(parsed.season ?? {}) },
     }
   } catch {
     return blank()
