@@ -1,0 +1,34 @@
+{
+  "name": "chesscrossing",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A chess game and a small world, governed by the laws of Wes Anderson.",
+  "scripts": {
+    "dev": "concurrently -k -n house,second -c cyan,magenta \"vite\" \"tsx watch server/index.ts\"",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p server/tsconfig.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "shot": "node scripts/shot.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fontsource/courier-prime": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
+    "chess.js": "^1.4.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@types/three": "^0.186.0",
+    "concurrently": "^10.0.5",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}
