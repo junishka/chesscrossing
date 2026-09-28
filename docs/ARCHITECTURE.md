@@ -292,3 +292,113 @@ Camera stations in `FrameDef` are relative to the frame origin in `layout`. Hous
 ### main.ts
 
 Boot order: `loadFonts()` → `new Stage()` → `buildAll()` → `new BoardView()` at the board frame's table position → `new UI()` → `new Game()` → `audio.init()` on first pointerdown → title card → menu. Wires: hotspot kind `board` → push-in to the seated station, `ui:mode board`; "stand up" → back to the room station; resident → `ui.converse.open` with a context provider giving the position brief when the persona is the Second, else the current frame + discoveries. Exposes `window.__cc = { goto, mode, game, ui, nav, ready }` for scripted screenshots.
+
+---
+
+## Bible supersedes (numbers that changed after docs/BIBLE.md landed)
+
+- Whip pan 350 ms (easeInQuart to 60 %, hard stop, 100 ms blur, silent). Dolly 900 ms linear with 40 ms in / 60 ms out. Lift 1100 ms linear with 60 ms each end. Section 1400 ms. Table → Chart 1100 ms with a focal ramp 22 → 80 mm.
+- Frame budget 150k triangles and 300 draw calls; one shadow-casting light, fitted to the active room; none outdoors.
+- Hover moves nothing (Law of hover, bible §11): no lift, scale, glow or outline on hover. The rim words warm; the card appears at the bottom of the frame. Doors and objects show their label only.
+- Lenses are focal lengths at `camera.filmGauge = 35`: room 40, table 22, chart 80, profile 35, telescope 135, section 40. `FrameDef.lens` and `CameraStation` stations carry them; the CameraRig ramps focal length during a transition when the destination differs.
+- Letterbox 1.85:1 in the house and outside, 2.40:1 on the grid; matte `#141412`, surround `#1A1917`; the matte closes over 900 ms.
+- Slow motion is spent through `spendSlowMotion(reason)` in `src/station/season.ts`, reasons `checkmate | photograph | lasttide | crating` only.
+- Music obeys the inventory rule (bible §10): harmonium, ship's bell, the Olivetti, the Predictor's pulleys, the clock, Record 4. Themes: `survey` (once), `emptychair`, `slackwater` (held fifth while the gauge is level), `path` (no cue: shell underfoot, wind, Record 4 faint), `grid` (wind and channel), `house` (room tone only). No other instruments.
+
+## Station layer (`src/station/`)
+
+The station layer turns the modules into the game. It owns the season, the chapters, the grid, the Second, the ledger and the expedition controller. It talks to the scene and the UI through the bus and through the facades passed to it by `main.ts`.
+
+### station/season.ts
+
+```ts
+export class SeasonClock {
+  constructor()                                  // reads store.ledger.season
+  season: Season                                 // live object (same reference as store.ledger.season)
+  start(): void                                  // ticks on clock.onTick with wall time
+  clockLabel(): string                           // 'HH:MM' station time at 57.6×
+  isDusk(): boolean                              // watch 3 (16:00–20:00)
+  tideHeight(): number                           // 0..1
+  crossable(): boolean
+  secondsToWindowChange(): number
+  advanceDay(): void                             // after a finished game: date + 1, watch 0, emits season:change and, in Chapter Seven, crates one object
+  spendSlowMotion(reason: 'checkmate' | 'photograph' | 'lasttide' | 'crating', ms: number): Promise<void>   // 0.4×; throws on any other reason in dev
+}
+```
+Emits `season:change` at most once a second, `tide:window` when the crossable state flips (and 90 s before it closes: three bell strikes via `audio:sfx bell` ×3, 900 ms apart, from the house), `reading` when 05:20 or 17:50 passes (text from `content/station.ts`). Persists via `store.save()` every 10 s.
+
+### station/chapters.ts
+
+```ts
+export class ChapterEngine {
+  constructor(season: SeasonClock)
+  current(): number
+  isFrameOpen(frameId: string): boolean          // lockedUntilChapter and chapter unlock lists
+  requirementMet(r?: Requirement): boolean       // chapter, warrant, lowWater, watches, gamesFinished
+  check(): void                                  // evaluates every chapter's triggers (games finished, frames visited, residents spoken, date, grid square reached, card carried); unlocks in order, one per call
+  unlock(n: number): Promise<void>               // ui:title with the Recorder's card (chapter, title, sentence), audio survey theme, store.mark('chapters')
+}
+```
+Chapter One unlocks at start (its card is the first thing seen after the menu). Nothing is gated by winning.
+
+### station/grid.ts
+
+```ts
+export class GridWalk {
+  constructor(season: SeasonClock)
+  square: Square | null
+  warrants(): Warrant[]
+  legalIslets(): Square[]                        // king: one islet any direction; rook: straight lines; bishop: diagonals (union over granted warrants); h-file closed before Chapter Eight
+  moveTo(sq: Square): Promise<void>              // chart cut, pin travel 0.5 s per islet, cut to the islet stage; emits grid:move; marks visited; heron/eider/cinder are their own frames
+  readPlate(): void                              // marks platesRead, ledger:line "Cairn c4 (Cinder Reach) read.", SURVEYOR badge at 16
+  dressing(sq: Square): { flaw: number; object: number }   // hash(square) mod 4 / mod 6; fixed for a1, c6, e4, h8
+  cairnTags(sq: Square): CairnTag[]
+  tideCameIn(): Promise<void>                    // the return in the dinghy, ledger line, back to the jetty
+}
+```
+
+### station/second.ts
+
+```ts
+export class SecondService {
+  constructor(game: Game, season: SeasonClock)
+  packet(mode: SecondMode, question?: string): Promise<string>   // bible §5.11: STATION REPORT block from analysis.brief + season + book + rating; runs a 600 ms eval on the soundings engine and, when time allows, a 2-line multi-PV
+  ask(question: string, onDelta): Promise<string>                // mode DISCUSSION or FEEDBACK by heuristics (a question about the position → FEEDBACK)
+  onMove(move, brief): void                                      // trigger policy: player's move with a swing > 1.5 pawns, the first non-book move, a queen capture, game end → REMARK into the ledger (ledger:remark) or POST-MORTEM at game end; never during the chair's move; ≤ 1 spawn per 10 plies
+  remarkNow(): Promise<void>
+}
+```
+Persona id `brace`. The packet is passed as `ConverseRequest.context`; the server appends it after the persona. The mode line and the question are the last two lines of the packet.
+
+### station/ledger.ts
+
+```ts
+export interface LedgerRow { kind: 'header' | 'move' | 'line' | 'crate' | 'result' | 'leader'; ply?: number; text: string; islet?: string; remark?: string; san?: string; color?: Color; moveNumber?: number }
+export class LedgerRoll {
+  rows: LedgerRow[]                              // persisted in store.ledger.rows (add the field) with the leader lines fixed at the top
+  startExpedition(n: number, watch: WatchId, seaState: SeaState, date: string): void
+  move(move: MoveRecord, thinkMs?: number): void // adds the islet and rule remarks ("first return", "flag U hoisted", "the chair thought for 1.9 s")
+  remark(ply: number, text: string): void
+  line(text: string): void
+  result(text: string): void
+  pgnOfExpedition(n: number): string
+}
+```
+The HUD renders rows (extend `hud.setLedger` to accept `LedgerRow[]`; the UI's move-list renderer stays for the SAN columns).
+
+### station/expedition.ts
+
+```ts
+export class Expedition {
+  constructor(game: Game, boardView: BoardView, season: SeasonClock, ledger: LedgerRoll, second: SecondService, ui: UI)
+  begin(o?: { pgn?: string; clocks?: ClockState; houseGame?: boolean }): Promise<void>   // sea state → level/time via content/seaStates; watch → minutes/increment via content/watches; player is the light side unless houseGame (Black, sea state 5)
+  playerMove(input: MoveInput): Promise<void>    // pins, glide, then the chair's move by davit with chairBudgetMs; clocks stop on clamp; inserts through ui
+  resign(): Promise<void>; offerDraw(): Promise<void>; adjourn(): void   // adjourn = save (the log is the save file) and leave the board
+  end(status): Promise<void>                     // flags, ledger result, rating update, season.advanceDay(), cairn tags from captures, game counts in store, Chapter checks
+}
+```
+Rules of the room: after a transition the board accepts input only after 500 ms; after mate or resignation 2400 ms. The chair never moves while a piece is gliding. The player's own moves never get slow motion.
+
+### main.ts (boot, revised)
+
+`loadFonts()` → `assertPalette()` → `new Stage()` → `buildAll(frames, layout)` → `new BoardView(stage, boardroomGroup, boardCentreWorld, 'w')` → `new UI(root)` → `audio.init()` on first pointerdown → `new SeasonClock()`, `ChapterEngine`, `GridWalk`, `LedgerRoll`, `Game`, `SecondService`, `Expedition`, `Navigator` → `renderer.compile()` behind the title → menu (BEGIN THE SEASON / CONTINUE … / THE LEDGER / THE ROSTER / THE STANDING ORDERS) → Chapter One card → the Board Room station. Keys: 1/2/3 table/chart/profile; 0 section (from the landing); S consult; Escape closes cards; arrows follow doors. `window.__cc = { goto, mode, game, ui, nav, season, chapters, grid, expedition, ready }`.

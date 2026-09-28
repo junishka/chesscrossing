@@ -31,6 +31,7 @@ function blank(): Ledger {
     settings: { ...DEFAULT_SETTINGS },
     conversations: {},
     season: blankSeason(),
+    rows: [],
   }
 }
 
@@ -48,6 +49,7 @@ function load(): Ledger {
       settings: { ...base.settings, ...(parsed.settings ?? {}) },
       conversations: parsed.conversations ?? {},
       season: { ...blankSeason(), ...(parsed.season ?? {}) },
+      rows: Array.isArray(parsed.rows) ? parsed.rows : [],
     }
   } catch {
     return blank()

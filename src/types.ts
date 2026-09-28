@@ -294,6 +294,23 @@ export type ConverseEvent =
   | { type: 'error'; message: string }
 export interface Health { ok: boolean; cli: boolean; version?: string; model: string; reason?: string }
 
+// ───────────────────────────── The ledger roll ─────────────────────────────
+export type LedgerRowKind = 'leader' | 'volume' | 'header' | 'move' | 'remark' | 'line' | 'crate' | 'result'
+/** One row of the ruled roll. Moves carry the islet; remarks belong to the ply above them. */
+export interface LedgerRow {
+  kind: LedgerRowKind
+  text: string
+  ply?: number
+  moveNumber?: number
+  color?: Color
+  san?: string
+  islet?: string
+  remark?: string
+  expedition?: number
+  /** FEN after this move, for rewinding the board by clicking the row. */
+  fen?: string
+}
+
 // ───────────────────────────── Persistence ─────────────────────────────
 export interface Settings {
   sound: boolean
@@ -314,13 +331,22 @@ export interface Ledger {
   savedGame?: SavedGame
   conversations: Record<string, ChatMessage[]>
   season: Season
+  /** The roll, Vol. XIV, September 1965. */
+  rows: LedgerRow[]
 }
 
 // ───────────────────────────── Events ─────────────────────────────
 export type SfxName =
+  // generic (kept for the UI and navigator)
   | 'pickup' | 'place' | 'slide' | 'capture' | 'check' | 'mate' | 'castle' | 'promote'
   | 'tick' | 'flag' | 'whip' | 'dolly' | 'lift' | 'paper' | 'door' | 'bell' | 'typewriter'
   | 'hover' | 'select' | 'illegal' | 'record' | 'telephone' | 'drawer' | 'chime'
+  // the station's recipes (docs/BIBLE.md §10): pieces and davit
+  | 'rise' | 'glide' | 'seat' | 'pin' | 'knight' | 'ratchet' | 'creak' | 'clamp' | 'hoist' | 'tray'
+  // clock, ledger, board furniture
+  | 'lever' | 'flagfall' | 'knock' | 'adjourn' | 'key' | 'marginbell' | 'carriage' | 'spares'
+  // rooms and outside
+  | 'floorboard' | 'shell' | 'lamp' | 'pulleys' | 'photo' | 'tidebell' | 'wind' | 'gull'
 
 export type UiMode = 'title' | 'menu' | 'board' | 'world' | 'converse'
 
