@@ -1,11 +1,12 @@
 // The game controller: the player's moves, the engine's replies, the clocks, and the events that tell the house.
 import type {
   ClockState, Color, EngineLevel, GameEndReason, GameResult, GameSettings, GameStatus,
-  MoveInput, MoveRecord, PositionBrief, SavedGame,
+  MoveInput, MoveRecord, PositionBrief, SavedGame, SeaState,
 } from '../types'
 import { bus } from '../core/bus'
 import { clock } from '../core/clock'
 import { store } from '../core/store'
+import { CHAIR_MIN_WAIT_MS, chairBudgetMs } from '../content/seaStates'
 import { brief as buildBrief } from './analysis'
 import { Engine } from './engine'
 import { Position } from './rules'
@@ -20,8 +21,8 @@ const LEVEL_BUDGET: Record<EngineLevel, { timeMs: number; maxDepth?: number }> =
 }
 /** The engine never spends more than this share of its remaining clock on one move. */
 const CLOCK_SHARE = 1 / 12
-/** A human beat between the player's move landing and the engine's reply. */
-const REPLY_BEAT_MS = 350
+/** The chair waits at least this long after the player's move before it moves (docs/BIBLE.md §5.3). */
+const REPLY_BEAT_MS = CHAIR_MIN_WAIT_MS
 /** Minimum interval between `game:clock` emissions. */
 const CLOCK_EMIT_MS = 200
 /** Evaluation budgets for briefs: short after the player's move (the engine must still reply), full otherwise. */
@@ -30,6 +31,20 @@ const BRIEF_EVAL_MS = { quick: 250, full: 600 }
 const DRAW_THRESHOLD_CP = 40
 
 function other(c: Color): Color { return c === 'w' ? 'b' : 'w' }
+
+/**
+ * How the chair searches, from the barometer (docs/BIBLE.md §5.3). With a sea state the think time is
+ * `chairBudgetMs(state, remaining, increment)`, the sea state's own time under No Watch; `window` is the
+ * randomised levels' centipawn window. Without one, the level's fixed budget applies.
+ */
+export interface ChairSearch {
+  /** The sea state the chair plays at; its time and the watch give the budget per move. */
+  seaState?: SeaState
+  /** A fixed think time overriding the level's budget when no sea state is given. */
+  timeMs?: number
+  /** Centipawn window for levels 1 and 2 (overrides the level's fixed 150 or 60). */
+  window?: number
+}
 
 /** Whether a colour wins, loses or draws under a result. */
 function outcomeFor(result: GameResult, c: Color): 'won' | 'lost' | 'drawn' {
@@ -46,6 +61,14 @@ export class Game {
   settings: GameSettings = { playerColor: 'w', opponent: { kind: 'engine', level: 3, name: 'The Engine' }, minutes: 0, incrementSec: 0 }
   clocks: ClockState = { w: 0, b: 0, running: null, incrementMs: 0 }
   state: 'idle' | 'playing' | 'over' = 'idle'
+  /** The chair's search settings: sea state, time, window. Read at every reply. */
+  chair: ChairSearch = {}
+  /**
+   * When true the chair's clock keeps running after its move is decided until `clampClosed()` (the davit's
+   * clamp closes on the collar), and the player's clock starts only at `chairSeated()` (the lever clacks as
+   * the piece seats). When false the clocks change hands as the move is made.
+   */
+  holdChairClock = false
 
   private pos = new Position()
   private thinking = false
@@ -59,6 +82,8 @@ export class Game {
   private offTick: (() => void) | undefined
   /** Engine replies waiting for `resume` (the engine does not move while the game is paused). */
   private resumeWaiters: (() => void)[] = []
+  /** The chair has moved and its clock is waiting for the clamp (1) or the seat (2); 0 when not held. */
+  private hold: 0 | 1 | 2 = 0
 
   constructor(engine: Engine = new Engine()) {
     this.engine = engine
@@ -107,6 +132,7 @@ export class Game {
   async playerMove(input: MoveInput): Promise<MoveRecord | null> {
     if (this.state !== 'playing' || this.thinking || this.paused) return null
     if (this.pos.turn() !== this.settings.playerColor) return null
+    if (this.hold) this.chairSeated()
     const record = this.pos.move(input)
     if (!record) return null
     const movedAt = performance.now()
@@ -175,6 +201,27 @@ export class Game {
     this.wake()
   }
 
+  /** The davit's clamp has closed on the chair's piece: the chair's clock stops, its increment is added. */
+  clampClosed(): void {
+    if (this.hold !== 1) return
+    const chair = other(this.settings.playerColor)
+    if (this.clocks.running === chair) this.clocks[chair] += this.clocks.incrementMs
+    this.hold = 2
+    this.clocks.running = null
+    this.lastTickAt = performance.now()
+    this.emitClock(true)
+  }
+
+  /** The chair's piece has seated: the lever clacks over and the player's clock starts. */
+  chairSeated(): void {
+    if (!this.hold) return
+    if (this.hold === 1) this.clampClosed()
+    this.hold = 0
+    if (this.state !== 'playing') return
+    this.setRunning(this.pos.turn())
+    this.emitClock(true)
+  }
+
   /** The Second's brief for the current position, with a fresh 600ms evaluation. */
   async brief(): Promise<PositionBrief> {
     return this.makeBrief(BRIEF_EVAL_MS.full)
@@ -194,9 +241,14 @@ export class Game {
   /** Common tail of every move: clocks, events, end-of-game detection, and the brief. */
   private afterMove(record: MoveRecord, byPlayer: boolean): void {
     const mover = record.color
-    if (this.clocks.running === mover) this.clocks[mover] += this.clocks.incrementMs
-    this.setRunning(other(mover))
     const status = this.pos.status()
+    if (!byPlayer && this.holdChairClock && !status.isGameOver && this.clocks.running === mover) {
+      // The chair's clock runs on until the clamp closes; see `clampClosed` and `chairSeated`.
+      this.hold = 1
+    } else {
+      if (this.clocks.running === mover) this.clocks[mover] += this.clocks.incrementMs
+      this.setRunning(other(mover))
+    }
     bus.emit('game:move', { move: record, status, byPlayer })
     this.emitClock(true)
     if (status.isGameOver && status.result && status.reason) {
@@ -240,20 +292,28 @@ export class Game {
 
   /** The engine's chosen move, within its budget; a legal fallback when the engine fails. */
   private async searchReply(): Promise<MoveInput | null> {
-    const budget = LEVEL_BUDGET[this.settings.opponent.level]
+    const level = this.settings.opponent.level
+    const budget = LEVEL_BUDGET[level]
     const remaining = this.clocks[this.pos.turn()]
-    const timeMs = this.clocks.running ? Math.max(50, Math.min(budget.timeMs, remaining * CLOCK_SHARE)) : budget.timeMs
+    let timeMs: number
+    if (this.chair.seaState !== undefined) {
+      timeMs = chairBudgetMs(this.chair.seaState, this.timed ? remaining : null, this.clocks.incrementMs)
+    } else {
+      const base = this.chair.timeMs ?? budget.timeMs
+      timeMs = this.clocks.running ? Math.max(50, Math.min(base, remaining * CLOCK_SHARE)) : base
+    }
     const fen = this.pos.fen()
     try {
-      const result = await this.engine.search(fen, { timeMs, maxDepth: budget.maxDepth, level: this.settings.opponent.level })
+      const result = await this.engine.search(fen, { timeMs, maxDepth: budget.maxDepth, level, window: this.chair.window })
       this.lastEval = { scoreCp: result.scoreCp, mateIn: result.mateIn }
       const chosen = result.move
       if (chosen && this.pos.legalMoves(chosen.from).some((m) => m.to === chosen.to)) return chosen
     } catch (err) {
       console.error('[game] engine search failed', err)
     }
+    // A legal fallback, chosen by the ply so every player sees the same one.
     const legal = this.pos.legalMoves()
-    return legal.length ? legal[Math.floor(Math.random() * legal.length)] : null
+    return legal.length ? legal[this.pos.ply() % legal.length] : null
   }
 
   /** The engine has no move to make in a position the rules say is alive: it concedes. */
@@ -296,6 +356,7 @@ export class Game {
   /** Bumps the generation so in-flight engine work is discarded, and asks the engine to stop. */
   private invalidate(): void {
     this.generation++
+    this.hold = 0
     this.engine.stop()
     this.wake()
   }
@@ -310,6 +371,7 @@ export class Game {
   private finish(status: GameStatus, result: GameResult, reason: GameEndReason): void {
     if (this.state === 'over') return
     this.generation++
+    this.hold = 0
     this.wake()
     this.state = 'over'
     if (this.thinking) bus.emit('game:thinking', { thinking: false })

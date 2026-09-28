@@ -83,8 +83,8 @@ export class UI {
     setLedger(moves: MoveRecord[]): void
     /** The roll itself, from the station layer; append-only diffing by index. */
     setRows(rows: LedgerRow[]): void
-    /** Clicking a move row rewinds the board to that ply. */
-    onRowClick(fn: (ply: number) => void): void
+    /** Clicking a move row rewinds the board to that ply; the row itself is passed too. */
+    onRowClick(fn: (ply: number, row: LedgerRow) => void): void
     /** Which colour the Visitor plays; the dials and the columns follow it. */
     setPlayerColor(c: Color): void
     setStatus(text: string): void
@@ -93,7 +93,7 @@ export class UI {
   }
   readonly converse: { open(persona: CharacterDef, contextProvider: ContextProvider): void; close(): void; readonly isOpen: boolean }
   readonly menu: { open(o: MenuSpec): void; close(): void }
-  readonly boardControls: { show(o: BoardControlHandlers): void; hide(): void }
+  readonly boardControls: { show(o: BoardControlHandlers): void; hide(): void; setView(v: 'overhead' | 'seated' | 'side'): void }
 
   private titles: TitleLayer
   private hudLayer: Hud
@@ -109,6 +109,8 @@ export class UI {
   private aspect: number | undefined
   private moves: MoveRecord[] = []
   private playerColor: Color = 'w'
+  /** Once the station layer hands the HUD the roll (`hud.setRows`), game events no longer rebuild it from the move list. */
+  private rollOwned = false
   private offs: (() => void)[] = []
 
   constructor(root: HTMLElement) {
@@ -137,8 +139,8 @@ export class UI {
     const hud = this.hudLayer
     this.hud = {
       setClocks: (c) => hud.setClocks(c),
-      setLedger: (moves) => { this.moves = [...moves]; hud.setLedger(this.moves); this.refreshCaptured() },
-      setRows: (rows) => hud.setRows(rows),
+      setLedger: (moves) => { this.moves = [...moves]; this.rollOwned = false; hud.setLedger(this.moves); this.refreshCaptured() },
+      setRows: (rows) => { this.rollOwned = true; hud.setRows(rows) },
       onRowClick: (fn) => hud.onRowClick(fn),
       setPlayerColor: (c) => { this.playerColor = c; hud.setPlayerColor(c) },
       setStatus: (t) => hud.setStatus(t),
@@ -152,7 +154,7 @@ export class UI {
       get isOpen() { return conv.isOpen },
     }
     this.menu = { open: (o) => this.menuLayer.open(o), close: () => this.menuLayer.close() }
-    this.boardControls = { show: (o) => hud.showControls(o), hide: () => hud.hideControls() }
+    this.boardControls = { show: (o) => hud.showControls(o), hide: () => hud.hideControls(), setView: (v) => hud.setView(v) }
 
     this.subscribe()
     window.addEventListener('resize', this.onResize)
@@ -175,9 +177,9 @@ export class UI {
     return this.titles.show(o)
   }
 
-  /** Shows a paper card; `null` closes it. */
-  card(card: CardDef | null): void {
-    this.cards.show(card)
+  /** Shows a paper card; `null` closes it. `onClose` is called once when this card leaves the screen. */
+  card(card: CardDef | null, onClose?: () => void): void {
+    this.cards.show(card, onClose)
   }
 
   /** One of the seven error-state cards of §4, typed, held until dismissed. The game continues behind it. */
@@ -265,7 +267,7 @@ export class UI {
     on('game:new', ({ settings, fen }) => {
       this.moves = []
       this.hud.setPlayerColor(settings.playerColor)
-      this.hudLayer.setLedger([])
+      if (!this.rollOwned) this.hudLayer.setLedger([])
       this.hudLayer.setCaptured([], [])
       this.hudLayer.setThinking(false)
       const turn: Color = fen.split(' ')[1] === 'b' ? 'b' : 'w'
@@ -273,14 +275,14 @@ export class UI {
     })
     on('game:move', ({ move, status }) => {
       this.moves.push(move)
-      this.hudLayer.setLedger(this.moves)
+      if (!this.rollOwned) this.hudLayer.setLedger(this.moves)
       if (move.captured) this.refreshCaptured()
       this.hudLayer.setThinking(false)
       if (!status.isGameOver) this.hudLayer.setStatus(toMoveText(status.turn, status.inCheck, this.playerColor))
     })
     on('game:undo', ({ fen }) => {
       while (this.moves.length && this.moves[this.moves.length - 1].fenAfter !== fen) this.moves.pop()
-      this.hudLayer.setLedger(this.moves)
+      if (!this.rollOwned) this.hudLayer.setLedger(this.moves)
       this.refreshCaptured()
       this.hudLayer.setThinking(false)
       const last = this.moves[this.moves.length - 1]

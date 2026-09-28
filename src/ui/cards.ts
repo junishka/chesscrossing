@@ -133,6 +133,7 @@ export class CardLayer {
   readonly el: HTMLElement
   private current: HTMLElement | null = null
   private hint: HTMLElement | null = null
+  private onClose: (() => void) | null = null
 
   constructor(parent: HTMLElement) {
     this.el = h('div', 'cc-cards')
@@ -142,10 +143,13 @@ export class CardLayer {
 
   get isOpen(): boolean { return this.current !== null }
 
-  /** Shows a card, replacing any on screen; `null` closes. */
-  show(def: CardDef | null): void {
+  /** Shows a card, replacing any on screen; `null` closes. `onClose` is called once when this card leaves. */
+  show(def: CardDef | null, onClose?: () => void): void {
     if (this.current) this.retire(this.current)
     this.current = null
+    const closed = this.onClose
+    this.onClose = null
+    closed?.()
     this.hint?.remove()
     this.hint = null
     this.el.classList.remove('is-centred')
@@ -157,6 +161,7 @@ export class CardLayer {
     this.el.classList.toggle('is-centred', def.kind === 'typed')
     this.el.append(card, this.hint)
     this.current = card
+    this.onClose = onClose ?? null
     bus.emit('audio:sfx', { name: 'paper', velocity: 0.6 })
   }
 

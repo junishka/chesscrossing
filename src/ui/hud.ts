@@ -162,7 +162,7 @@ export class Hud {
   private rows: LedgerRow[] = []
   private rowEls: HTMLElement[] = []
   private latest: HTMLElement | null = null
-  private rowClick: ((ply: number) => void) | null = null
+  private rowClick: ((ply: number, row: LedgerRow) => void) | null = null
   private tray: { light: HTMLElement; dark: HTMLElement; lightCount: HTMLElement; darkCount: HTMLElement }
   private status: HTMLElement
   private statusText: HTMLElement
@@ -264,8 +264,8 @@ export class Hud {
     this.roll.scrollTop = this.roll.scrollHeight
   }
 
-  /** Clicking a move row rewinds the board to it; the handler receives the ply. */
-  onRowClick(fn: (ply: number) => void): void {
+  /** Clicking a move row rewinds the board to it; the handler receives the ply and the row. */
+  onRowClick(fn: (ply: number, row: LedgerRow) => void): void {
     this.rowClick = fn
   }
 
@@ -362,7 +362,7 @@ export class Hud {
         if (row.ply !== undefined) {
           const ply = row.ply
           el.classList.add('is-ply')
-          el.addEventListener('click', () => this.rowClick?.(ply))
+          el.addEventListener('click', () => this.rowClick?.(ply, row))
         }
         return el
       }
